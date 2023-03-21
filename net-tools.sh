@@ -104,6 +104,9 @@ python_web()
 
 StrForBashUsed()
 {
+  ##USAGE: ls  $(StrForBashUsed /My\ Document/  ) 
+  ##   NOT ls "$(StrForBashUsed /My\ Document/  )"
+  
   SedSpecialChar= ;  SedAndShellSpecialChar= ;
   NeedBackSlashSpecialChar="\\\$" ## \\ Should be at First 
   OnlyShellSpecialChar="\"\`?*'&#<>()!{|};"
