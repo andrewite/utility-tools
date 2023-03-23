@@ -6,7 +6,7 @@ Help()
 
 python_web_server_in_one_line()
 {
-  WWW_PORT=$(echo $1 $WWW_PORT 8080 | cut -d\  f1 )
+  WWW_PORT=$(echo $1 $WWW_PORT 8080 | cut -d\  -f1 )
 
   if [ ! "$WWW_BASE" ] ;then
     export WWW_BASE=$HOME 
@@ -108,11 +108,11 @@ StrForBashUsed()
   ##   NOT ls "$(StrForBashUsed /My\ Document/  )"
   
   SedSpecialChar= ;  SedAndShellSpecialChar= ;
-  NeedBackSlashSpecialChar="\\\$" ## \\ Should be at First 
-  OnlyShellSpecialChar="\"\`?*'&#<>()!{|};"
+  NeedBackSlashInSedChar="\\\$[]^" ## \\ Should be at First 
+  OnlyShellSpecialChar="\"\`?*'&#<>()!{|};:,"
   (if [ "$1" ] ;then echo "$1" 
    else head -1 ; fi ) |
-   sed  $(echo $NeedBackSlashSpecialChar | sed s/./s\\/\\\\\&\\/\\\\\\\\\\\&\\/g\;/g ) |
+   sed  $(echo $NeedBackSlashInSedChar | sed s/./s\\/\\\\\&\\/\\\\\\\\\\\&\\/g\;/g ) |
    sed  $(echo $OnlyShellSpecialChar   | sed s/./s\\/\&\\/\\\\\\\\\\\&\\/g\;/g )     |
    sed    s/\ /\\\\\ /g 
 
