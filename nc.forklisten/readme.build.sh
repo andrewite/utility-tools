@@ -3,7 +3,7 @@
 ## this script will generate a new nc as a server. 
 ## If you want nc execute -e command only once, please use the old one.
 ## in this version , -e is similar to -c .
-## example:  -e " ls /usr/bin | grep zip " 
+## example:  -e " echo count; ls /usr/bin | wc " 
 
 
 ## below is the step for you to compile nc.srv 
@@ -12,13 +12,25 @@
 git clone https://github.com/H74N/netcat-binaries
 cd netcat-binaries
 
- sed "s/int dolisten (rad, rp, lad, lp)$/void waitchild(void *);\\n int AddNewSocketSocketPidPair(int,int);\\n int dolisten (rad, rp, lad, lp)/" -i netcat.c
+ sed "s/int dolisten (rad, rp, lad, lp)$/void waitchild(int);\\n int AddNewSocketSocketPidPair(int,int);\\n int dolisten (rad, rp, lad, lp)/" -i netcat.c
 
 
- sed "s/rr = accept (nnetfd, (SA \*)remend, &x);/signal(SIGCHLD,waitchild); while(1){ rr = accept (nnetfd, (SA *)remend, \&x);if(\!pr00gie) break; int newpid=fork(); if(newpid==0) break ;  AddNewSocketSocketPidPair(rr,newpid); };/" -i netcat.c
+ sed "s/rr = accept (nnetfd, (SA \*)remend, &x);/signal(SIGCHLD,waitchild); while(1){ rr = accept (nnetfd, (SA *)remend, \&x);if(o_forklisten<=0) break; int newpid=fork(); if(newpid==0) break ;  AddNewSocketSocketPidPair(rr,newpid); };/" -i netcat.c
 
 
- sed "s/  execl (pr00gie, p, NULL);$/ if(strchr(pr00gie, '|')||strchr(pr00gie, ';')) system(pr00gie); else  execl (pr00gie, p, NULL); /;s/  bail (\"exec %s failed\", pr00gie);//"  -i netcat.c
+ sed "s/  execl (pr00gie, p, NULL);$/ if(pr00gi_c){ system(pr00gi_c);return;} execl (pr00gie, p, NULL); /;s/  bail (\"exec %s failed\", pr00gie);//"  -i netcat.c
+
+sed "s/^      case 'e':\t\t/\t case 'c':pr00gie=pr00gi_c=optarg;break;\tcase 'f':o_forklisten++;break;\\n \tcase 'e':/"   -i netcat.c
+
+sed "s/^char \* pr00gie = NULL;	/\\n USHORT o_forklisten = 0;\\n char *pr00gi_c=NULL;char *pr00gie = NULL;	/g"   -i netcat.c
+
+
+sed "s/ae:g:G:hi:lno:p:rs:tuvw:z/ac:e:fg:G:hi:lno:p:rs:tuvw:z/"  -i netcat.c
+
+sed s"/^	-e prog		/\\t-f fork \\t\\t fork when listen\\\\n\\\\\\n\\t-c cmd\\t\\t\\\\n\\\\\\n\\t-e prog/"   -i netcat.c
+
+
+
 
 cat >> netcat.c <<EOF 
 
@@ -42,7 +54,7 @@ int AddNewSocketSocketPidPair(int sck,int pid)
   return 0;
 }
 
-void waitchild(void * arg)
+void waitchild(int arg)
 {
    int status = 0 ;
 
