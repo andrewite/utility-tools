@@ -8,11 +8,11 @@
 
 ## below is the step for you to compile nc.srv 
 
-
+#git clone git@github.com:H74N/netcat-binaries
 git clone https://github.com/H74N/netcat-binaries
 cd netcat-binaries
 
- sed "s/int dolisten (rad, rp, lad, lp)$/void waitchild(int);\\n int AddNewSocketSocketPidPair(int,int);\\n int dolisten (rad, rp, lad, lp)/" -i netcat.c
+ sed "s/int dolisten (rad, rp, lad, lp)$/ USHORT o_forklisten = 0;\\n void waitchild(int);\\n int AddNewSocketSocketPidPair(int,int);\\n int dolisten (rad, rp, lad, lp)/" -i netcat.c
 
 
  sed "s/rr = accept (nnetfd, (SA \*)remend, &x);/signal(SIGCHLD,waitchild); while(1){ rr = accept (nnetfd, (SA *)remend, \&x);if(o_forklisten<=0) break; int newpid=fork(); if(newpid==0) break ;  AddNewSocketSocketPidPair(rr,newpid); };/" -i netcat.c
@@ -20,14 +20,14 @@ cd netcat-binaries
 
  sed "s/  execl (pr00gie, p, NULL);$/ if(pr00gi_c){ system(pr00gi_c);return;} execl (pr00gie, p, NULL); /;s/  bail (\"exec %s failed\", pr00gie);//"  -i netcat.c
 
-sed "s/^      case 'e':\t\t/\t case 'c':pr00gie=pr00gi_c=optarg;break;\tcase 'f':o_forklisten++;break;\\n \tcase 'e':/"   -i netcat.c
+sed "s/^      case 'e':\t\t/\t case 'c':pr00gie=pr00gi_c=optarg;break;\tcase 'L':o_forklisten++;o_listen++; break;\\n \tcase 'e':/"   -i netcat.c
 
-sed "s/^char \* pr00gie = NULL;	/\\n USHORT o_forklisten = 0;\\n char *pr00gi_c=NULL;char *pr00gie = NULL;	/g"   -i netcat.c
+sed "s/^char \* pr00gie = NULL;	/\\n char *pr00gi_c=NULL;char *pr00gie = NULL;	/g"   -i netcat.c
 
 
-sed "s/ae:g:G:hi:lno:p:rs:tuvw:z/ac:e:fg:G:hi:lno:p:rs:tuvw:z/"  -i netcat.c
+sed "s/ae:g:G:hi:lno:p:rs:tuvw:z/ac:e:g:G:hi:lLno:p:rs:tuvw:z/"  -i netcat.c
 
-sed s"/^	-e prog		/\\t-f fork \\t\\t fork when listen\\\\n\\\\\\n\\t-c cmd\\t\\t\\\\n\\\\\\n\\t-e prog/"   -i netcat.c
+sed s"/^	-e prog		/\\t-L fork \\t\\t fork when listen\\\\n\\\\\\n\\t-c cmd\\t\\t\\\\n\\\\\\n\\t-e prog/"   -i netcat.c
 
 
 
@@ -72,6 +72,7 @@ void waitchild(int arg)
    if(p){
      // printf("closing sock:%p %d \n", p->next,p->iSocket);
      //  if(pParent) printf("pParent:%p p %p next %p \n", pParent,p,pParent->next);
+     shutdown(p->iSocket,SHUT_RDWR);
      close(p->iSocket);
      if(pParent) pParent->next=p->next ;
        else pSocketPidPairHead=p->next ; 
