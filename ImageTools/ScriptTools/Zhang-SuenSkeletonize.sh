@@ -79,6 +79,38 @@ Zhang_Suen_Method_Awk__Loop()
   rm $tmp1 $tmp2
 }
 
+GetBMPColorBitNum()
+{
+   local FILE="$1"
+   tail -c+$((1+0x1c)) "$FILE" | od -vAn -tu2 -w2 |head -1
+}
+
+PrintBMPImgData()
+{
+   local BMPColorBitNum=$1
+   local ImgWidth=$2 
+   local WhiteGate="${WhiteGate-128}"
+   
+   if [ "$BMPColorBitNum" = "24" ] ;then
+    awk -v WhiteGate=$WhiteGate '{for(i=1;i+2<=NF;i+=3){v=$i+$(i+1)+$(i+2);if(v>WhiteGate*3)v=1;else v=0; printf("%d ",v)}print ""; }' 
+   elif [ "$BMPColorBitNum" = "1" ] ;then
+     awk -v ImgWidth=$ImgWidth '
+     function ToBinary(x,maxBits  ,s,i){for(i=1;i<=8;i++)if(i<=maxBits){s=x%2 " " s;x=x/2-(x/2%1);}return s}
+     {for(i=1;i<=NF;i++){printf("%s",ToBinary($i,ImgWidth-8*(i-1)));}print "";  } ' 
+   fi
+}
+
+RestoreImgDataToBMP()
+{
+   local BMPColorBitNum=$1
+   local ImgWidth=$2 
+   if [ "$BMPColorBitNum" = "24" ] ;then
+     awk '{for(i=1;i<=NF;i++){v=$i;if(v>1)v=1;v*=255;printf("%02x %02x %02x ",v,v,v);}; i=(3*NF)%4;if(i)while(i++<4)printf(" 00");print "" ; }'
+   elif [ "$BMPColorBitNum" = "1" ] ;then
+     local ImgDataWidth=$(( (($ImgWidth*$BMPColorBitNum+31)/32)*4 ))
+     awk -v ImgWidth=$ImgWidth  -v ImgDataWidth=$ImgDataWidth '{for(i=1;i<=ImgDataWidth*8;i++){if(i%8==1)v=0;v=v*2; if(i<=ImgWidth)v+=$i;if(i%8==0)printf("%02x ",v);}; print "" ; }'
+   fi
+}
 
 ProcessBMPImgDataUsingXX()
 {
@@ -86,18 +118,17 @@ ProcessBMPImgDataUsingXX()
   local FILE="$2"
   local OUTFILE="$3"
   
-  local WhiteGate="${WhiteGate-128}"
-
  (
  local ImgDateOffset=$(tail -c+3 "$FILE" | od -vAn -tu4 -w4| sed -n "3s/ *//p")
  local Width=$(tail -c+3 "$FILE" | od -vAn -tu4 -w4| sed -n "5s/ *//p")
- local ImgDataWidth=$(( (($Width*3+3)/4)*4 ))
+ local BMPColorBitNum=$(GetBMPColorBitNum "$FILE" )
+ local ImgDataWidth=$(( (($Width*$BMPColorBitNum+31)/32)*4 ))
 
  cat "$FILE"  | head -c +$ImgDateOffset ;
  cat "$FILE"  | tail -c +$((1+$ImgDateOffset)) | od -tu1 -vAn -w$ImgDataWidth  |
-   awk -v WhiteGate=$WhiteGate '{for(i=1;i+2<=NF;i+=3){v=$i+$(i+1)+$(i+2);if(v>WhiteGate*3)v=1;else v=0; printf("%d ",v)}print ""; }'   |
-    $DataProcessMethod   $Width  |
-   awk '{for(i=1;i<=NF;i++){v=$i;if(v>1)v=1;v*=255;printf("%02x %02x %02x ",v,v,v);}; i=(3*NF)%4;if(i)while(i++<4)printf(" 00");print "" ; }' | xxd -r -ps ) > "$OUTFILE"
+    PrintBMPImgData      $BMPColorBitNum $Width  |
+    $DataProcessMethod      $Width               |
+    RestoreImgDataToBMP  $BMPColorBitNum $Width  | xxd -r -ps ) > "$OUTFILE"
 
 }
 
@@ -140,9 +171,10 @@ if [ -z "$FILE" ] || [ -z "$OUTFILE" ] ;then
  echo "    you can use convert(or mogrify) XXX.jpg(or png)   -alpha off  <-negate>  XXX.bmp to get it."
  exit; 
 fi
-  BMPColorNum=$(tail -c+$((1+0x1c)) "$FILE" | od -vAn -tu2 -w2 |head -1)
-if [ $BMPColorNum != 24 ] ;then 
- echo Only support bmp file in 24bit format . ;
+  BMPColorBitNum=$(GetBMPColorBitNum "$FILE" )
+if [ "$(head -c 2 "$FILE" )" != "BM" ]  || 
+   ( [ $BMPColorBitNum != 24 ] && [ $BMPColorBitNum != 1 ] ) ;then 
+ echo Only bmp files in 24bits or 1bit format are supported. ;
  exit; 
 fi
 
